@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -50,6 +49,9 @@
         let touchEndX = 0;
         let touchEndY = 0;
 
+        // Add at the start of your script
+        let directionQueue = [];
+
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
@@ -76,9 +78,23 @@
             }
         }
 
-        function update() {
-            if (isPaused) return;
+        // Add this helper function
+        function isOppositeDirection(dir1, dir2) {
+            return dir1.x === -dir2.x || dir1.y === -dir2.y;
+        }
 
+        // Modify your game update logic to use the queue
+        function updateGame() {
+            if (isPaused) return;
+            
+            // Process next direction from queue
+            if (directionQueue.length > 0) {
+                const nextDirection = directionQueue.shift();
+                if (!isOppositeDirection(direction, nextDirection)) {
+                    direction = nextDirection;
+                }
+            }
+            
             const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
 
             // Wrap around walls
@@ -147,29 +163,30 @@
             isPaused = !isPaused;
         });
 
-        window.addEventListener('keydown', (e) => {
-            if (e.key === " " || e.key === "Spacebar") {
-                isPaused = !isPaused;
-            } else {
-                switch (e.key) {
-                    case "ArrowUp":
-                        if (direction.y === 0) direction = { x: 0, y: -1 };
-                        break;
-                    case "ArrowDown":
-                        if (direction.y === 0) direction = { x: 0, y: 1 };
-                        break;
-                    case "ArrowLeft":
-                        if (direction.x === 0) direction = { x: -1, y: 0 };
-                        break;
-                    case "ArrowRight":
-                        if (direction.x === 0) direction = { x: 1, y: 0 };
-                        break;
+        // Replace the existing keyboard event handlers with this
+        document.addEventListener('keydown', (e) => {
+            if (isPaused) return;
+            
+            const newDirection = {
+                'ArrowUp': { x: 0, y: -1 },
+                'ArrowDown': { x: 0, y: 1 },
+                'ArrowLeft': { x: -1, y: 0 },
+                'ArrowRight': { x: 1, y: 0 }
+            }[e.key];
+
+            if (newDirection) {
+                // Only add to queue if it's a valid move (not reversing direction)
+                const currentDirection = directionQueue.length > 0 ? 
+                    directionQueue[directionQueue.length - 1] : direction;
+                    
+                if (!isOppositeDirection(currentDirection, newDirection)) {
+                    directionQueue.push(newDirection);
                 }
             }
         });
 
         function gameLoop() {
-            update();
+            updateGame();
             draw();
             setTimeout(gameLoop, 100);
         }
